@@ -18,10 +18,6 @@ class FileContentExtractionTool(BaseTool):
         return False
 
     @property
-    def deployment_name(self) -> str:
-        return "file_content_extraction_tool"
-
-    @property
     def name(self) -> str:
         return "file_content_extraction_tool"
 

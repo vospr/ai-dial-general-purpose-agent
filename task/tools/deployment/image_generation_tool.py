@@ -22,28 +22,81 @@ class ImageGenerationTool(DeploymentTool):
         #    'The image has been successfully generated according to request and shown to user!'
         #    Sometimes models are trying to add generated pictures as well to content (choice), with this instruction
         #    we are notifing LLLM that it was done (but anyway sometimes it will try to add file 😅)
-        raise NotImplementedError()
+        #raise NotImplementedError()
+        msg = await super()._execute(tool_call_params)
+
+        if msg.custom_content and msg.custom_content.attachments:
+            for attachment in msg.custom_content.attachments:
+                if attachment.type in ("image/png", "image/jpeg"):
+                    tool_call_params.choice.append_content(f"\n\r![image]({attachment.url})\n\r")
+
+            if not msg.content:
+                msg.content = StrictStr('The image has been successfully generated according to request and shown to user!')
+
+        return msg
 
     @property
     def deployment_name(self) -> str:
         # TODO: provide deployment name for model that you have added to DIAL Core config (dall-e-3)
-        raise NotImplementedError()
+        #raise NotImplementedError()
+        return "dall-e-3"
 
     @property
     def name(self) -> str:
         # TODO: provide self-descriptive name
-        raise NotImplementedError()
+        #raise NotImplementedError()
+        return "image_generation_tool"
 
     @property
     def description(self) -> str:
         # TODO: provide tool description that will help LLM to understand when to use this tools and cover 'tricky'
         #  moments (not more 1024 chars)
-        raise NotImplementedError()
+        #raise NotImplementedError()
+        return "# Image generator\nGenerates image based on the provided description.\n## Instructions:\n- Use that tool when user asks to generate an image based on the description or to visualize some text or information.\n- Choose the best size from available options based on user request or image type. For specific size requests, use the closest supported option.\n- When the tool returns a markdown image URL, always include it in your response and follow it with a brief description.\n## Restrictions:\n- Never use this tool for data or numerical information visualization."
+
     @property
     def parameters(self) -> dict[str, Any]:
         # TODO: provide tool parameters JSON Schema:
         #  - prompt is string, description: "Extensive description of the image that should be generated.", required
         #  - there are 3 optional parameters: https://platform.openai.com/docs/guides/image-generation?image-generation-model=dall-e-3#customize-image-output
         #  - Sample: https://learn.microsoft.com/en-us/azure/ai-foundry/openai/how-to/dall-e?tabs=dalle-3#call-the-image-generation-api
-        raise NotImplementedError()
-
+        #raise NotImplementedError()
+        return {
+            "type": "object",
+            "properties": {
+                "prompt": {
+                    "type": "string",
+                    "description": "Extensive description of the image that should be generated."
+                },
+            
+                "size": {
+                    "type": "string",
+                    "description": "The size of the generated image.",
+                    "enum": [
+                        "1024x1024",
+                        "1024x1792",
+                        "1792x1024"
+                    ],
+                    "default": "1024x1024"
+                },
+                "style": {
+                    "type": "string",
+                    "description": "The style of the generated image.",
+                    "enum": [
+                        "natural",
+                        "vivid"
+                    ],
+                    "default": "natural"
+                },
+                "quality": {
+                    "type": "string",
+                    "description": "The quality of the generated image.",
+                    "enum": [
+                        "standard",
+                        "hd"
+                    ],
+                    "default": "standard"
+                }
+            },
+            "required": ["prompt", "size", "style", "quality"]
+        }
